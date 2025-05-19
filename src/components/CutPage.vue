@@ -23,8 +23,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { MoreOutlined,PushpinOutlined,SearchOutlined } from '@ant-design/icons-vue'
+import { invoke } from '@tauri-apps/api/core'
 
 
+invoke("greet",{ name:'迪丽热巴'}).then((res)=>{
+  console.log(res)
+})
 
 const text = ref()
 var searchkey = ref(null)

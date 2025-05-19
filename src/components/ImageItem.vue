@@ -29,11 +29,12 @@ onMounted(()=>{
     queryImageItems()
 })
 
-var queryImageItems = () => window.electron.ipcRenderer.invoke('queryImageItems').then(items=>{
-    items.forEach(element => {
-        imageList.value.push(element.dataValues);
-    });
-})
+var queryImageItems = () => {}
+//  window.electron.ipcRenderer.invoke('queryImageItems').then(items=>{
+//     items.forEach(element => {
+//         imageList.value.push(element.dataValues);
+//     });
+// })
 
 </script>
 
