@@ -79,7 +79,7 @@ import { message } from 'ant-design-vue';
 import { VirtList } from 'vue-virt-list';
 import { containsIgnoreCase } from '../../utils/StringUtil'
 import { showMessageShort } from '../../utils/MessageUtil'
-
+import dbService from '../db_service';
 
 const localeFunc = (number, index, totalSec) => {
   return [
@@ -139,8 +139,9 @@ watchEffect(()=>{
 
 // =============================发射
 //查询全部剪切列表
-var sendQueryCutList = () => {
-
+var sendQueryCutList = async() => {
+  let result = await dbService.fetchItems()
+  allCutList.value = result
 }
 
 // window.electron.ipcRenderer.invoke('queryCutList').then(resp => {

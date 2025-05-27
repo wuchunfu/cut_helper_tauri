@@ -26,9 +26,9 @@ import { MoreOutlined,PushpinOutlined,SearchOutlined } from '@ant-design/icons-v
 import { invoke } from '@tauri-apps/api/core'
 
 
-invoke("greet",{ name:'迪丽热巴'}).then((res)=>{
-  console.log(res)
-})
+// invoke("greet",{ name:'迪丽热巴'}).then((res)=>{
+//   console.log(res)
+// })
 
 const text = ref()
 var searchkey = ref(null)
@@ -36,13 +36,14 @@ var activeKey = ref("timeList")
 const timeListVue = ref(null);
 
 var updateTop = (isTop)=>{
-
+  
 }
 // var updateTop = (isTop) => window.electron.ipcRenderer.send('top',isTop)
 
 const appConfig = ref({
   "top":true,
 })
+
 
 
 // 固定界面到最上层
