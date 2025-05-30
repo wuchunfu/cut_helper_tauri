@@ -24,6 +24,7 @@
 import { ref, onMounted } from 'vue'
 import { MoreOutlined,PushpinOutlined,SearchOutlined } from '@ant-design/icons-vue'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 
 // invoke("greet",{ name:'迪丽热巴'}).then((res)=>{
@@ -36,7 +37,7 @@ var activeKey = ref("timeList")
 const timeListVue = ref(null);
 
 var updateTop = (isTop)=>{
-  
+  getCurrentWindow().setAlwaysOnTop(isTop);
 }
 // var updateTop = (isTop) => window.electron.ipcRenderer.send('top',isTop)
 

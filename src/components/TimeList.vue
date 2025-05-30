@@ -181,9 +181,12 @@ var sendCopyItem = (item) => {
 // window.electron.ipcRenderer.on('update', (_, value) => update(value))
 
 function update(value) {
-  // console.log(value)
-  allCutList.value.unshift(value);
-  allCutList.value.pop()
+  console.log(value)
+  let len = allCutList.value.unshift(value);
+  if (len >= 500) {
+    allCutList.value.pop()
+  }
+      
   // listKey.value += 1;
 
   // nextTick(() => {
@@ -191,6 +194,8 @@ function update(value) {
   //   document.getElementsByClassName('cut-list').scrollTop = 100
   // });
 }
+
+window.addCutItemToList = update
 // 关闭弹出信息
 
 // 打开选择分组Model
@@ -217,9 +222,8 @@ function addItemToGroup() {
     }
     addGroupItem(tmpGroupItem)
 }
-function hidePop() {
-  closed.value = false
-}
+
+
 
 
 function getTarget() {

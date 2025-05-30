@@ -9,7 +9,10 @@ async function myTimerFunction() {
     const content = await readText();
     console.log(content);
     if (old_content != content) {
-        db_service.addItem(content);
+        let item = await db_service.addItem(content);
+        if (window.addCutItemToList){
+            window.addCutItemToList(item)
+        }
     }
     old_content = content;
   }

@@ -1,12 +1,14 @@
 pub mod commands;
 pub mod utils;
 use tauri_plugin_sql::{Migration, MigrationKind};
+use tauri_plugin_positioner::{WindowExt, Position};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
     println!("{}", name);
     format!("你好，美女 {}", name)
 }
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -47,6 +49,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_positioner::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:cut.db", migrations)
