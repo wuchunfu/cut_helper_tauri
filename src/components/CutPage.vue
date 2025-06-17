@@ -5,7 +5,7 @@
         <time-list id="timelist" ref="timeListVue"></time-list>
     </a-tab-pane>
     <a-tab-pane key="imageList" tab="图片"><image-item></image-item></a-tab-pane>
-    <a-tab-pane key="groupList" tab="分组"><group></group></a-tab-pane>
+    <!-- <a-tab-pane key="groupList" tab="分组"><group></group></a-tab-pane> -->
     <a-tab-pane key="time" tab="白板">
       <!-- <time-page></time-page> -->
        <text-edit></text-edit>
@@ -16,7 +16,7 @@
       </a-button>
       <a-input v-model:value="searchkey" :change="search()" size="default" style="width: 8em;margin-left: 4px;" placeholder="搜索" allow-clear />
     </template>
-  </a-tabs> 
+  </a-tabs>
   </div>
 </template>
 
@@ -39,7 +39,6 @@ const timeListVue = ref(null);
 var updateTop = (isTop)=>{
   getCurrentWindow().setAlwaysOnTop(isTop);
 }
-// var updateTop = (isTop) => window.electron.ipcRenderer.send('top',isTop)
 
 const appConfig = ref({
   "top":true,

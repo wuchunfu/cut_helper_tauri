@@ -80,6 +80,7 @@ import { VirtList } from 'vue-virt-list';
 import { containsIgnoreCase } from '../../utils/StringUtil'
 import { showMessageShort } from '../../utils/MessageUtil'
 import dbService from '../db_service';
+import {copyToSystem} from '../cut_service';
 
 const localeFunc = (number, index, totalSec) => {
   return [
@@ -149,7 +150,7 @@ var sendQueryCutList = async() => {
 // })
 
 var sendDeleteItem = (remove) => {
-
+    dbService.removeItem(remove.id)
 }
 // window.electron.ipcRenderer.send('deleteCutListItem', JSON.stringify(remove))
 
@@ -174,6 +175,7 @@ const addGroupItem = (groupItem) => {}
 var sendCopyItem = (item) => {
   doubleClick = true;
   console.log(item)
+  copyToSystem(item.content)
   // window.electron.ipcRenderer.send('sendCopyItem', JSON.stringify(item))
   showMessageShort("拷贝成功")
 }
@@ -183,7 +185,7 @@ var sendCopyItem = (item) => {
 function update(value) {
   console.log(value)
   let len = allCutList.value.unshift(value);
-  if (len >= 500) {
+  if (len >= 300) {
     allCutList.value.pop()
   }
       

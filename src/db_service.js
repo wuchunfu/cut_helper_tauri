@@ -29,9 +29,17 @@ export default {
   async fetchItems() {
     await this.init();
     try {
-      const result = await db.select('SELECT * FROM CutItems');
-      console.log("query:",result)
+      const result = await db.select('SELECT * FROM CutItems order by createTime desc');
       return result;
+    } catch (error) {
+      console.error('Error fetching items:', error);
+    }
+  },
+
+  async removeItem(id) {
+    await this.init();
+    try {
+      await db.execute('DELETE FROM CutItems WHERE id =?',[id]);
     } catch (error) {
       console.error('Error fetching items:', error);
     }

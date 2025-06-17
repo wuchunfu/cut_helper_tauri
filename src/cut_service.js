@@ -15,7 +15,7 @@ async function myTimerFunction() {
         }
     }
     old_content = content;
-  }
+}
   
 // 开始监控剪切板
 function start(){
@@ -30,4 +30,8 @@ function stop() {
     console.log("停止剪切板监控")
 }
 
-export { start,stop };
+async function copyToSystem(content){
+    await writeText(content)
+}
+
+export  { start,stop,copyToSystem};

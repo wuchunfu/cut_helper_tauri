@@ -16,6 +16,11 @@
     "sql:allow-close",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
-    "core:window:allow-set-always-on-top"
+    "core:window:allow-set-always-on-top",
+    "process:default",
+    "core:window:allow-unminimize",
+    "core:window:allow-minimize",
+    "core:window:allow-show",
+    "core:window:allow-set-focus"
   ]
 }
