@@ -26,7 +26,6 @@ declare module 'vue' {
     ATabPane: typeof import('ant-design-vue/es')['TabPane']
     ATabs: typeof import('ant-design-vue/es')['Tabs']
     ATag: typeof import('ant-design-vue/es')['Tag']
-    copy: typeof import('./src/components/TimeList copy.vue')['default']
     CutPage: typeof import('./src/components/CutPage.vue')['default']
     Detail: typeof import('./src/components/Detail.vue')['default']
     EditHotKey: typeof import('./src/components/setting/EditHotKey.vue')['default']

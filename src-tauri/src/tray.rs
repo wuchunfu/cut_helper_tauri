@@ -3,6 +3,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
     Runtime,
+    image::Image
 };
 
 pub fn create_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
@@ -11,9 +12,10 @@ pub fn create_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     let hide_i = MenuItem::with_id(app, "hide", "隐藏", true, None::<&str>)?;
     // 分割线
     let menu = Menu::with_items(app, &[&quit_i, &show_i, &hide_i])?;
-
+    let tray_icon= Image::from_bytes(include_bytes!("../icons/icon.png"))
+    .expect("Failed to load tray icon");
     let _ = TrayIconBuilder::with_id("tray")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tray_icon)
         .menu(&menu)
         .menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
