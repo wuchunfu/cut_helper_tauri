@@ -1,12 +1,12 @@
 <template>
-  <div class="cut-list" ref="scrollerRef" style="height: 100%;">
+  <div class="cut-list"  ref="scrollerRef" style="height: 100%;" @keydown="handleKeyDown">
     <a-back-top :target="()=>getTarget()"/>
-    <virt-list tabindex="0" class="scroller" :list="showItemList" itemKey="id" :minSize="40" 
-       id="cutItemBox">
+    <virt-list class="scroller" tabindex="0"  :list="showItemList" itemKey="id" :minSize="40" 
+       id="cutItemBox" ref="virtListRef">
       <!-- page-mode -->
       <!--  -->
       <template #default="{ itemData,index}">
-      <div class="list-item" v-on:dblclick="sendCopyItem(itemData)" style="padding: 5px">
+      <div class="list-item" v-on:dblclick="sendCopyItem(itemData)" :class="{'list-item-selected': currentItemIdx === index }" style="padding: 5px">
         <!-- 原有的 a-list-item 内容 -->
         <div style="height: 1.5em;line-height:1.5em;flex:1;overflow: hidden;margin-right: 6px;">
         <a-skeleton avatar :title="false" :loading="!!itemData.loading" active>
@@ -20,7 +20,7 @@
                   </div>
                 </template>
                 <div style="margin-right: 6px;white-space: nowrap;">
-                  <label>{{ (index + 1) }} . {{ itemData.content }}</label>
+                  <li>{{ (index + 1) }} . {{ itemData.content }}</li>
                 </div>
               </a-popover>
             </template>
@@ -105,6 +105,9 @@ register('short', localeFunc)
 //全量剪切版数据
 const allCutList = ref([])
 
+//当前item id
+const currentItemIdx = ref(-1)
+
 const showItemList = ref([])
 var initLoading = ref(true)
 // 搜索key
@@ -120,12 +123,26 @@ const groupList = ref([])
 const groupSelectOpen = ref(false)
 const groupSelectId = ref("")
 const currCutItem = ref({})
-
+const listRef = ref(null);
 const scrollerRef = ref(null);
+const virtListRef = ref(null);
 onMounted(() => {
   // 获取全量数据
   sendQueryCutList();
   initLoading.value = false
+  // 设置焦点到列表容器
+  nextTick(() => {
+    if (scrollerRef.value) {
+      scrollerRef.value.focus();
+    }
+    // 确保虚拟滚动组件已初始化
+    if (virtListRef.value) {
+      console.log('虚拟滚动组件已初始化');
+      // 调试：查看虚拟滚动组件的DOM结构
+      console.log('虚拟滚动组件DOM:', virtListRef.value.$el);
+      console.log('虚拟滚动组件子元素:', virtListRef.value.$el?.children);
+    }
+  });
 })
 
 watchEffect(()=>{
@@ -245,6 +262,8 @@ const search = (key) => {
   timeoutId = setTimeout(() => {
     console.log(key)
     searchKey.value = key
+    // 搜索时重置选中状态到第一项
+    currentItemIdx.value = 0;
   }, 500);
 }
 
@@ -279,9 +298,242 @@ function formatDate(dateStr) {
   return formattedDate
 }
 
+function abtainFocus() {
+  if (virtListRef.value?.$el) {
+    virtListRef.value.$el.focus();
+  } else if (scrollerRef.value) {
+    scrollerRef.value.focus();
+  }
+}
+
 
 // 暴漏方法
-defineExpose({ search });
+defineExpose({ search, abtainFocus, currentItemIdx, navigateToFirst, navigateUp, navigateDown, navigateToLast });
+
+// 键盘导航处理
+function handleKeyDown(event) {
+  const key = event.key;
+  
+  switch (key) {
+    case 'ArrowUp':
+      event.preventDefault();
+      navigateUp();
+      break;
+    case 'ArrowDown':
+      event.preventDefault();
+      navigateDown();
+      break;
+    case 'Enter':
+      event.preventDefault();
+      if (currentItemIdx.value >= 0 && currentItemIdx.value < showItemList.value.length) {
+        sendCopyItem(showItemList.value[currentItemIdx.value]);
+      }
+      break;
+    case 'Home':
+      event.preventDefault();
+      navigateToFirst();
+      break;
+    case 'End':
+      event.preventDefault();
+      navigateToLast();
+      break;
+  }
+}
+
+// 向上导航
+function navigateUp() {
+  if (showItemList.value.length === 0) return;
+  
+  if (currentItemIdx.value > 0) {
+    currentItemIdx.value--;
+  }
+  
+  // 检查是否需要滚动，添加延迟确保虚拟滚动渲染完成
+  nextTick(() => {
+    setTimeout(() => {
+      if (!isSelectedItemVisible()) {
+        scrollToSelectedItem();
+      }
+    }, 50);
+  });
+}
+
+// 向下导航
+function navigateDown() {
+  if (showItemList.value.length === 0) return;
+  
+  if (currentItemIdx.value < showItemList.value.length - 1) {
+    currentItemIdx.value++;
+  }
+  
+  // 检查是否需要滚动，添加延迟确保虚拟滚动渲染完成
+  nextTick(() => {
+    setTimeout(() => {
+      if (!isSelectedItemVisible()) {
+        scrollToSelectedItem();
+      }
+    }, 50);
+  });
+}
+
+// 跳转到第一项
+function navigateToFirst() {
+  if (showItemList.value.length === 0) return;
+  currentItemIdx.value = 0;
+  scrollToSelectedItem();
+}
+
+// 跳转到最后一项
+function navigateToLast() {
+  if (showItemList.value.length === 0) return;
+  currentItemIdx.value = showItemList.value.length - 1;
+  scrollToSelectedItem();
+}
+
+// 检测选中项是否在可视区域内
+function isSelectedItemVisible() {
+  if (currentItemIdx.value < 0 || currentItemIdx.value >= showItemList.value.length) {
+    return false;
+  }
+  
+  // 尝试多种方式获取滚动容器
+  let scrollContainer = null;
+  
+  // 方法1: 通过虚拟滚动组件的引用
+  if (virtListRef.value?.$el) {
+    scrollContainer = virtListRef.value.$el;
+  }
+  
+  // 方法2: 通过ID查找
+  if (!scrollContainer) {
+    scrollContainer = document.getElementById('cutItemBox');
+  }
+  
+  // 方法3: 查找实际的滚动容器
+  if (!scrollContainer) {
+    const scrollerElement = document.querySelector('.scroller');
+    if (scrollerElement) {
+      scrollContainer = scrollerElement;
+    }
+  }
+  
+  if (!scrollContainer) {
+    return false;
+  }
+  
+  const itemHeight = 40;
+  const targetScrollTop = currentItemIdx.value * itemHeight;
+  const containerHeight = scrollContainer.clientHeight;
+  const currentScrollTop = scrollContainer.scrollTop;
+  const maxScrollTop = scrollContainer.scrollHeight - containerHeight;
+  
+  const itemTop = targetScrollTop;
+  const itemBottom = itemTop + itemHeight;
+  const visibleTop = currentScrollTop;
+  const visibleBottom = currentScrollTop + containerHeight;
+  
+  // 检查项目是否完全在可视区域内
+  const isFullyVisible = itemTop >= visibleTop && itemBottom <= visibleBottom;
+  
+  // 特殊处理：如果是最后一个item，允许部分可见
+  if (currentItemIdx.value === showItemList.value.length - 1) {
+    return itemTop >= visibleTop && itemTop < visibleBottom;
+  }
+  
+  return isFullyVisible;
+}
+
+// 滚动到选中项
+function scrollToSelectedItem() {
+  nextTick(() => {
+    if (currentItemIdx.value < 0 || currentItemIdx.value >= showItemList.value.length) {
+      return;
+    }
+    
+    // 尝试多种方式获取滚动容器
+    let scrollContainer = null;
+    
+    // 方法1: 通过虚拟滚动组件的引用
+    if (virtListRef.value?.$el) {
+      scrollContainer = virtListRef.value.$el;
+    }
+    
+    // 方法2: 通过ID查找
+    if (!scrollContainer) {
+      scrollContainer = document.getElementById('cutItemBox');
+    }
+    
+    // 方法3: 查找实际的滚动容器
+    if (!scrollContainer) {
+      const scrollerElement = document.querySelector('.scroller');
+      if (scrollerElement) {
+        scrollContainer = scrollerElement;
+      }
+    }
+    
+    if (!scrollContainer) {
+      console.warn('无法找到滚动容器');
+      return;
+    }
+    
+    // 计算选中项的位置
+    const itemHeight = 40; // minSize 的值
+    const targetScrollTop = currentItemIdx.value * itemHeight;
+    
+    // 获取当前滚动容器的尺寸
+    const containerHeight = scrollContainer.clientHeight;
+    const currentScrollTop = scrollContainer.scrollTop;
+    const maxScrollTop = scrollContainer.scrollHeight - containerHeight;
+    
+    // 检查是否需要滚动
+    const itemTop = targetScrollTop;
+    const itemBottom = itemTop + itemHeight;
+    const visibleTop = currentScrollTop;
+    const visibleBottom = currentScrollTop + containerHeight;
+    
+    let newScrollTop = currentScrollTop;
+    
+    // 特殊处理：如果是最后一个item
+    if (currentItemIdx.value === showItemList.value.length - 1) {
+      // 确保最后一个item的顶部在可视区域内
+      if (itemTop < visibleTop) {
+        newScrollTop = itemTop;
+      } else if (itemTop >= visibleBottom) {
+        newScrollTop = itemTop;
+      }
+    } else {
+      // 普通item的滚动逻辑
+      if (itemTop < visibleTop) {
+        newScrollTop = itemTop;
+      } else if (itemBottom > visibleBottom) {
+        newScrollTop = itemBottom - containerHeight;
+      }
+    }
+    
+    // 边界检查：确保滚动位置在有效范围内
+    newScrollTop = Math.max(0, Math.min(newScrollTop, maxScrollTop));
+    
+    // 执行滚动
+    if (newScrollTop !== currentScrollTop) {
+      try {
+        scrollContainer.scrollTo({
+          top: newScrollTop,
+          behavior: 'smooth'
+        });
+      } catch (error) {
+        console.warn('scrollTo方法失败，尝试使用scrollIntoView:', error);
+        // 备选方案：使用scrollIntoView
+        const selectedElement = document.querySelector('.list-item-selected');
+        if (selectedElement) {
+          selectedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+          });
+        }
+      }
+    }
+  });
+}
 </script>
 
 
@@ -313,6 +565,18 @@ defineExpose({ search });
 
 .list-item:hover {
   background-color: rgb(171, 225, 153);
+}
+
+.list-item-selected {
+  background-color: rgb(171, 225, 153);
+}
+
+.cut-list:focus {
+  outline: none;
+}
+
+.list-item:focus {
+  outline: none;
 }
 
 .click—class {

@@ -14,14 +14,14 @@
       <a-button :type="appConfig.top?'primary':'default'" @click="top()">
         <template #icon><PushpinOutlined /></template>
       </a-button>
-      <a-input v-model:value="searchkey" :change="search()" size="default" style="width: 8em;margin-left: 4px;" placeholder="搜索" allow-clear />
+      <a-input ref="searchInputRef" v-model:value="searchkey" tabindex="0" @keydown="handleKeyDown" :change="search()" size="default" style="width: 8em;margin-left: 4px;" placeholder="搜索" allow-clear />
     </template>
   </a-tabs>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { MoreOutlined,PushpinOutlined,SearchOutlined } from '@ant-design/icons-vue'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -35,6 +35,7 @@ const text = ref()
 var searchkey = ref(null)
 var activeKey = ref("timeList")
 const timeListVue = ref(null);
+const searchInputRef = ref(null);
 
 var updateTop = (isTop)=>{
   getCurrentWindow().setAlwaysOnTop(isTop);
@@ -59,6 +60,69 @@ function search() {
     timeListVue.value.search(searchkey.value)
   }
 }
+// 监听方向键↓，让列表获得焦点
+function handleKeyDown(event) {
+  console.log(event.key)
+  if(event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault(); // 阻止默认行为
+    if(timeListVue.value != null) {
+      // 先让TimeList获取焦点
+      timeListVue.value.abtainFocus()
+      
+      // 延迟执行导航，确保焦点切换完成
+      setTimeout(() => {
+        // 如果TimeList还没有选中项，设置第一个为选中项
+        if (timeListVue.value.currentItemIdx === undefined || timeListVue.value.currentItemIdx < 0) {
+          // 通过调用TimeList的方法来设置第一个选中项
+          timeListVue.value.navigateToFirst && timeListVue.value.navigateToFirst();
+        } else if (event.key === 'ArrowDown') {
+          // 如果已经有选中项，直接向下导航
+          timeListVue.value.navigateDown && timeListVue.value.navigateDown();
+        } else if (event.key === 'ArrowUp') {
+          // 如果已经有选中项，直接向上导航
+          timeListVue.value.navigateUp && timeListVue.value.navigateUp();
+        }
+      }, 10);
+    }
+  } else if(event.key === 'Enter') {
+    // 按回车键时，如果有搜索结果，切换到列表并选中第一项
+    event.preventDefault();
+    if(timeListVue.value != null) {
+      timeListVue.value.abtainFocus()
+      setTimeout(() => {
+        timeListVue.value.navigateToFirst && timeListVue.value.navigateToFirst();
+      }, 10);
+    }
+  }
+}
+
+// 全局键盘事件处理函数
+function handleGlobalKeyDown(event) {
+  // 检查是否按下 Ctrl + F
+  if (event.ctrlKey && event.key === 'f') {
+    event.preventDefault(); // 阻止默认的浏览器搜索行为
+    focusSearchInput();
+  }
+}
+
+// 设置焦点到搜索框
+function focusSearchInput() {
+  if (searchInputRef.value) {
+    searchInputRef.value.focus();
+    // 可选：选中搜索框中的文本
+    searchInputRef.value.select();
+  }
+}
+
+onMounted(() => {
+  // 添加全局键盘事件监听器
+  document.addEventListener('keydown', handleGlobalKeyDown);
+})
+
+onUnmounted(() => {
+  // 移除全局键盘事件监听器
+  document.removeEventListener('keydown', handleGlobalKeyDown);
+})
 </script>
 
 
