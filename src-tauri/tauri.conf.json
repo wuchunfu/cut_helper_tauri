@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "cut",
+  "productName": "剪切板助手",
   "version": "0.1.0",
   "identifier": "com.sallai.cut",
   "build": {
@@ -22,6 +22,9 @@
     }
   },
   "bundle": {
+    "category": "Utility",
+    "shortDescription": "剪切板助手",
+    "longDescription": "一款完全本地化的剪切板记录工具，工具的初衷是帮助用户记录剪切板内容，方便用户查看历史复制内容。提高工作效率。",
     "active": true,
     "targets": "all",
     "icon": [
@@ -31,6 +34,17 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+      }
+    },
+    "resources": [
+    ],
+    "publisher": "sallai",
+    "copyright": "Copyright © 2025 sallai. All rights reserved."
   }
 }

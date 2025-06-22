@@ -1,9 +1,14 @@
 [package]
 name = "cut"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "剪切板助手 - 让每一次C,V变得有意义"
+authors = ["sallai <sallai@aliyun.com>"]
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/sallai/cut_helper_tauri"
+homepage = "https://github.com/sallai/cut_helper_tauri"
+keywords = ["clipboard", "tauri", "desktop"]
+categories = ["desktop-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
