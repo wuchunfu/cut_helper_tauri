@@ -92,11 +92,31 @@ jobs:
 
     # 6️⃣ 构建
     - name: Build Tauri App
-      run: npm run tauri build -- --bundles appimage
+      run: npm run tauri build -- --bundles deb,rpm
 
     # 7️⃣ 上传产物
     - uses: actions/upload-artifact@v4
       with:
         name: snipclip-linux-x64
         path: |
-          src-tauri/target/release/bundle/appimage/*.AppImage
+          src-tauri/target/release/bundle/*/*.deb
+          src-tauri/target/release/bundle/*/*.rpm
+          src-tauri/target/release/bundle/*/*.AppImage
+    # 8️⃣ 发布到 GitHub Releases
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/v')   # 只有打了 tag 才触发
+      with:
+        files: |
+          src-tauri/target/release/bundle/*/*.deb
+          src-tauri/target/release/bundle/*/*.rpm
+          src-tauri/target/release/bundle/*/*.AppImage
+        tag_name: ${{ github.ref_name }}          # 自动取 tag 名
+        name: Release ${{ github.ref_name }}
+        body: |
+          自动构建发布包：
+          - `.deb`：Ubuntu / Debian
+          - `.rpm`：Fedora / openSUSE / RHEL
+          - `.AppImage`：通用 Linux（无需安装）
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
