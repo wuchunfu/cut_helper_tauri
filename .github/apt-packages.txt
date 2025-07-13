@@ -1,3 +1,8 @@
 libglib2.0-dev
 libgtk-3-dev
 pkg-config
+libsoup-3.0-dev
+libwebkit2gtk-4.0-dev
+libayatana-appindicator3-dev
+librsvg2-dev
+build-essential
