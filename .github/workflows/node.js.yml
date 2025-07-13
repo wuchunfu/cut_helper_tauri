@@ -23,7 +23,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: apt update & apt install libglib2.0-dev pkg-config  
+    - run: apt-get install libglib2.0-dev pkg-config  
     - run: cd src-tauri
     - run: pwd
     - run: npm ci
