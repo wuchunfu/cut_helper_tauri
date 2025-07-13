@@ -89,18 +89,24 @@ jobs:
       run: |
         npm ci
         cd src-tauri && cargo fetch
+        rustup target add x86_64-pc-windows-msvc
+        cargo install --locked cargo-xwin
 
     # 6️⃣ 构建
     - name: Build Tauri App
-      run: npm run tauri build -- --bundles deb,rpm
+      run: |
+        npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc
+        npm run tauri build -- --bundles deb,rpm
+      
 
     # 7️⃣ 上传产物
     - uses: actions/upload-artifact@v4
       with:
-        name: snipclip-linux-x64
+        name: cut-helper-product-x64
         path: |
           src-tauri/target/release/bundle/*/*.deb
           src-tauri/target/release/bundle/*/*.rpm
+          src-tauri/target/release/bundle/*/*.exe
           src-tauri/target/release/bundle/*/*.AppImage
     # 8️⃣ 发布到 GitHub Releases
     - name: Release
@@ -110,6 +116,7 @@ jobs:
         files: |
           src-tauri/target/release/bundle/*/*.deb
           src-tauri/target/release/bundle/*/*.rpm
+          src-tauri/target/release/bundle/*/*.exe
           src-tauri/target/release/bundle/*/*.AppImage
         tag_name: ${{ github.ref_name }}          # 自动取 tag 名
         name: Release ${{ github.ref_name }}
