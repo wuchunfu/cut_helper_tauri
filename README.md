@@ -17,8 +17,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourname/snipclip.git
-cd snipclip/src-tauri
+git clone https://github.com/sallaixu/cut_helper_tauri.git
+cd cut_helper_tauri/src-tauri
 
 # 安装依赖
 pnpm install          # 也可使用 yarn 或 npm
@@ -46,7 +46,7 @@ pnpm tauri build
 
 ## 📦 下载安装
 
-前往 [Releases](https://github.com/yourname/snipclip/releases)  
+前往 [Releases](https://github.com/sallaixu/cut_helper_tauri/releases)  
 获取 Windows / macOS / Linux 的**绿色安装包**。
 
 ---
