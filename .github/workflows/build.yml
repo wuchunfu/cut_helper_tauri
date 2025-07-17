@@ -77,7 +77,7 @@ jobs:
         path: |
           src-tauri/target/release/bundle/*/*.deb
           src-tauri/target/release/bundle/*/*.rpm
-          src-tauri/target/release/bundle/*/*.exe
+          src-tauri/target/x86_64-pc-windows-msvc/release/bundle/*/*.exe
           src-tauri/target/release/bundle/*/*.AppImage
     # 8️⃣ 发布到 GitHub Releases
     - name: Release
@@ -87,7 +87,7 @@ jobs:
         files: |
           src-tauri/target/release/bundle/*/*.deb
           src-tauri/target/release/bundle/*/*.rpm
-          src-tauri/target/release/bundle/*/*.exe
+          src-tauri/target/x86_64-pc-windows-msvc/release/bundle/*/*.exe
           src-tauri/target/release/bundle/*/*.AppImage
         tag_name: ${{ github.ref_name }}          # 自动取 tag 名
         name: Release ${{ github.ref_name }}
@@ -95,6 +95,7 @@ jobs:
           自动构建发布包：
           - `.deb`：Ubuntu / Debian
           - `.rpm`：Fedora / openSUSE / RHEL
+          - `.exe`：windows
           - `.AppImage`：通用 Linux（无需安装）
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
