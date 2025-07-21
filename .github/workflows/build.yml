@@ -3,10 +3,10 @@ name: 构建二进制版本
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
+    tags:
+      - "v*.*.*"
+permissions:
+  contents: write
 env:
   CARGO_INCREMENTAL: 0    # 减少缓存体积
   RUST_BACKTRACE: short
