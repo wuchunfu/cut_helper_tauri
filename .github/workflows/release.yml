@@ -41,7 +41,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: latest
+          version: v2.0.1
           install-only: true
 
       - name: Run GoReleaser
