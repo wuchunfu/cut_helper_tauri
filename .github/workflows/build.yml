@@ -1,4 +1,3 @@
-
 name: 构建二进制版本
 
 on:
@@ -13,13 +12,18 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [macos-latest, windows-latest]
         node-version: [20.x]
-    if: |
-      contains(github.event.head_commit.message, 'build release') ||
-      startsWith(github.ref, 'refs/tags/v')
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bundles: dmg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: msi
     steps:
     # 1️⃣ 源码
     - uses: actions/checkout@v4
@@ -37,65 +41,50 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
       with:
-        key: tauri-linux-${{ hashFiles('**/Cargo.lock') }}
+        key: tauri-${{matrix.os}}-${{ hashFiles('**/Cargo.lock') }}
 
-    # 4️⃣ APT 缓存（系统依赖）
-    - name: Cache APT packages
-      id: apt-cache
-      uses: actions/cache@v4
+    # 4️⃣ 安装 Windows 构建工具 (仅 Windows)
+    - name: Install Windows SDK
+      if: matrix.os == 'windows-latest'
+      uses: msys2/setup-msys2@v2
       with:
-        path: |
-          /var/cache/apt/archives
-          /var/lib/apt/lists
-        key: ${{ runner.os }}-apt-${{ hashFiles('.github/apt-packages.txt') }}
-
-    - name: Install system dependencies
-      if: steps.apt-cache.outputs.cache-hit != 'true'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends $(cat .github/apt-packages.txt)
+        update: true
+        install: >-
+          git
+          base-devel
+          mingw-w64-x86_64-toolchain
 
     # 5️⃣ 前端 & Rust 依赖
     - name: Install npm & Cargo deps
       run: |
         npm ci
         cd src-tauri && cargo fetch
-        rustup target add x86_64-pc-windows-msvc
-        cargo install --locked cargo-xwin
+        rustup target add ${{ matrix.target }}
 
     # 6️⃣ 构建
     - name: Build Tauri App
       run: |
-        npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc
-        npm run tauri build -- --bundles deb,rpm
-      
+        npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
     # 7️⃣ 上传产物
     - uses: actions/upload-artifact@v4
       with:
-        name: cut-helper-product-x64
+        name: cut-helper-product-${{ matrix.os }}
         path: |
-          src-tauri/target/release/bundle/*/*.deb
-          src-tauri/target/release/bundle/*/*.rpm
-          src-tauri/target/x86_64-pc-windows-msvc/release/bundle/*/*.exe
-          src-tauri/target/release/bundle/*/*.AppImage
+          src-tauri/target/${{ matrix.target }}/release/bundle/*/*
+
     # 8️⃣ 发布到 GitHub Releases
     - name: Release
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v')   # 只有打了 tag 才触发
       with:
         files: |
-          src-tauri/target/release/bundle/*/*.deb
-          src-tauri/target/release/bundle/*/*.rpm
-          src-tauri/target/x86_64-pc-windows-msvc/release/bundle/*/*.exe
-          src-tauri/target/release/bundle/*/*.AppImage
+          src-tauri/target/${{ matrix.target }}/release/bundle/*/*
         tag_name: ${{ github.ref_name }}          # 自动取 tag 名
         name: Release ${{ github.ref_name }}
         body: |
           自动构建发布包：
-          - `.deb`：Ubuntu / Debian
-          - `.rpm`：Fedora / openSUSE / RHEL
-          - `.exe`：windows
-          - `.AppImage`：通用 Linux（无需安装）
+          - `.dmg`：macOS
+          - `.msi`：Windows
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
