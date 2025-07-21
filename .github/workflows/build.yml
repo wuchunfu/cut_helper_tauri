@@ -1,13 +1,15 @@
-name: 构建二进制版本
+name: 发布release
 
 on:
   push:
     tags:
       - "v*.*.*"
+
 permissions:
   contents: write
+
 env:
-  CARGO_INCREMENTAL: 0    # 减少缓存体积
+  CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
 
 jobs:
@@ -21,70 +23,74 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             bundles: dmg
+            artifact-pattern: "*.dmg"
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: msi
+            artifact-pattern: "*.msi"
+
     steps:
-    # 1️⃣ 源码
-    - uses: actions/checkout@v4
+      # 1️⃣ 检出代码
+      - uses: actions/checkout@v4
 
-    # 2️⃣ Node + npm 缓存
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: '**/package-lock.json'
+      # 2️⃣ Node.js 设置和缓存
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
 
-    # 3️⃣ Rust / Cargo 缓存
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-    - uses: Swatinem/rust-cache@v2
-      with:
-        key: tauri-${{matrix.os}}-${{ hashFiles('**/Cargo.lock') }}
+      # 3️⃣ Rust 工具链和缓存
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: tauri-${{matrix.os}}-${{ hashFiles('**/Cargo.lock') }}
 
-    # 4️⃣ 安装 Windows 构建工具 (仅 Windows)
-    - name: Install Windows SDK
-      if: matrix.os == 'windows-latest'
-      uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          git
-          base-devel
-          mingw-w64-x86_64-toolchain
+      # 4️⃣ Windows 构建环境
+      - name: Install Windows SDK
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-x86_64-toolchain
 
-    # 5️⃣ 前端 & Rust 依赖
-    - name: Install npm & Cargo deps
-      run: |
-        npm ci
-        cd src-tauri && cargo fetch
-        rustup target add ${{ matrix.target }}
+      # 5️⃣ 安装依赖
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd src-tauri && cargo fetch
+          rustup target add ${{ matrix.target }}
 
-    # 6️⃣ 构建
-    - name: Build Tauri App
-      run: |
-        npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      # 6️⃣ 构建
+      - name: Build Tauri App
+        run: |
+          npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
-    # 7️⃣ 上传产物
-    - uses: actions/upload-artifact@v4
-      with:
-        name: cut-helper-product-${{ matrix.os }}
-        path: |
-          src-tauri/target/${{ matrix.target }}/release/bundle/*/*
+      # 7️⃣ 上传产物（优化：只上传最终安装包）
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cut-helper-${{ matrix.os }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.artifact-pattern }}
 
-    # 8️⃣ 发布到 GitHub Releases
-    - name: Release
-      uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/v')   # 只有打了 tag 才触发
-      with:
-        files: |
-          src-tauri/target/${{ matrix.target }}/release/bundle/*/*
-        tag_name: ${{ github.ref_name }}          # 自动取 tag 名
-        name: Release ${{ github.ref_name }}
-        body: |
-          自动构建发布包：
-          - `.dmg`：macOS
-          - `.msi`：Windows
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 8️⃣ 发布到 GitHub Releases
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.artifact-pattern }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            自动构建发布包：
+            - macOS (.dmg)
+            - Windows (.msi)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
