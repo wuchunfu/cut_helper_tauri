@@ -77,7 +77,7 @@ jobs:
         with:
           name: cut-helper-${{ matrix.os }}
           path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.artifact-pattern }}
+            src-tauri/target/${{ matrix.target }}/release/bundle/${{matrix.bundles}}/${{ matrix.artifact-pattern }}
 
       # 8️⃣ 发布到 GitHub Releases
       - name: Release
@@ -85,7 +85,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           files: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.artifact-pattern }}
+            src-tauri/target/${{ matrix.target }}/release/bundle/${{matrix.bundles}}/${{ matrix.artifact-pattern }}
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
