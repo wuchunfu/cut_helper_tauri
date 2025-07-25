@@ -47,7 +47,7 @@ pnpm tauri build
 ## 📦 下载安装
 
 前往 [Releases](https://github.com/sallaixu/cut_helper_tauri/releases)  
-获取 Windows / macOS / Linux 的**绿色安装包**。
+获取 Windows / macOS / Linux 
 
 ---
 
@@ -58,4 +58,3 @@ pnpm tauri build
 ## 📄 开源协议
 
 MIT License © [sallai](https://github.com/sallaixu)  
-```
