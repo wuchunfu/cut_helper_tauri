@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod utils;
+pub mod config;
 use tauri_plugin_sql::{Migration, MigrationKind};
 mod tray;
 
@@ -69,11 +70,25 @@ pub fn run() {
         )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--flag1", "--flag2"])))
         .setup(|app| {
             #[cfg(all(desktop))]
             {
             let handle = app.handle();
             tray::create_tray(handle)?;
+            
+            // 根据配置设置自启动
+            let config_result = config::AppConfig::load(&handle);
+            if let Ok(cfg) = config_result {
+                use tauri_plugin_autostart::ManagerExt;
+                let auto_launch = handle.autolaunch();
+                
+                if cfg.auto_start {
+                    let _ = auto_launch.enable();
+                } else {
+                    let _ = auto_launch.disable();
+                }
+            }
             }
             Ok(())
         })
@@ -82,7 +97,11 @@ pub fn run() {
             commands::cut_admin::get_db_path,
             commands::image_processor::process_clipboard_image,
             commands::image_processor::calculate_image_hash,
-            commands::image_processor::monitor_and_process_clipboard_image
+            commands::image_processor::monitor_and_process_clipboard_image,
+            config::get_config,
+            config::save_config,
+            config::set_auto_start,
+            config::is_auto_start_enabled
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
