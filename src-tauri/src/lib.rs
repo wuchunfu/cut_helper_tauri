@@ -1,6 +1,5 @@
 pub mod commands;
 pub mod utils;
-use tauri_plugin_positioner::{Position, WindowExt};
 use tauri_plugin_sql::{Migration, MigrationKind};
 mod tray;
 
@@ -8,7 +7,7 @@ mod tray;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
-        // Define your migrations here
+        // 版本2 - 原始的初始表创建（必须保留，不能修改，否则数据库会报错）
         Migration {
             version: 2,
             description: "create_initial_tables",
@@ -40,6 +39,23 @@ pub fn run() {
             "#,
             kind: MigrationKind::Up,
         },
+        // 版本4 - 添加图片表（跳过版本3避免之前的冲突）
+        Migration {
+            version: 4,
+            description: "add_image_items_table",
+            sql: r#"
+            CREATE TABLE IF NOT EXISTS "ImageItems" (
+            "id" UUID NOT NULL,
+            "content" TEXT NOT NULL,
+            "width" INTEGER,
+            "height" INTEGER,
+            "size" INTEGER,
+            "createTime" DATETIME NOT NULL,
+            PRIMARY KEY ("id")
+            );
+            "#,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -61,7 +77,13 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![commands::cut_admin::test_fun])
+        .invoke_handler(tauri::generate_handler![
+            commands::cut_admin::test_fun,
+            commands::cut_admin::get_db_path,
+            commands::image_processor::process_clipboard_image,
+            commands::image_processor::calculate_image_hash,
+            commands::image_processor::monitor_and_process_clipboard_image
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

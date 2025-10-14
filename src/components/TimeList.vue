@@ -88,13 +88,68 @@
       </a-radio-group>
     </a-modal>
     </div>
+    
+    <!-- 详情模态框 -->
+    <a-modal 
+      v-model:open="detailModalOpen" 
+      title="详情信息" 
+      width="800px"
+      :footer="null"
+      @cancel="closeDetail"
+    >
+      <div class="detail-modal-content">
+        <!-- 基本信息 -->
+        <a-descriptions :column="1" bordered size="small">
+          <a-descriptions-item label="ID">
+            {{ detailItem.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatDate(detailItem.createTime) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="相对时间">
+            {{ format(detailItem.createTime, 'short') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="内容长度">
+            {{ detailItem.content ? detailItem.content.length : 0 }} 字符
+          </a-descriptions-item>
+        </a-descriptions>
+        
+        <!-- 内容区域 -->
+        <div style="margin-top: 16px;">
+          <div style="font-weight: bold; margin-bottom: 8px;">内容详情：</div>
+          <a-textarea 
+            v-model:value="detailItem.content" 
+            :rows="15" 
+            readonly
+            style="font-family: 'Courier New', monospace; white-space: pre-wrap; word-break: break-all;"
+          />
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div style="margin-top: 16px; text-align: right;">
+          <a-space>
+            <a-button @click="copyDetailContent" type="primary">
+              <template #icon><CopyOutlined /></template>
+              复制内容
+            </a-button>
+            <a-button @click="deleteDetailItem" danger>
+              <template #icon><DeleteOutlined /></template>
+              删除
+            </a-button>
+            <a-button @click="closeDetail">
+              关闭
+            </a-button>
+          </a-space>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { format, register } from 'timeago.js'
 import { ref, onMounted, computed, nextTick, watchEffect, watch } from 'vue'
-import { MoreOutlined, DeleteOutlined, EditOutlined, GroupOutlined } from '@ant-design/icons-vue'
+import { MoreOutlined, DeleteOutlined, EditOutlined, GroupOutlined, CopyOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { VirtList } from 'vue-virt-list'
 import { containsIgnoreCase } from '../../utils/StringUtil'
@@ -147,28 +202,25 @@ const groupSelectOpen = ref(false) // 分组选择模态框显示状态
 const groupSelectId = ref('') // 选中的分组ID
 const currCutItem = ref({}) // 当前操作的剪切项
 
+// 详情相关数据
+const detailModalOpen = ref(false) // 详情模态框显示状态
+const detailItem = ref({}) // 详情项数据
+
 // 组件引用
 const listRef = ref(null)
 const scrollerRef = ref(null)
 const virtListRef = ref(null)
 
 // ==================== 生命周期 ====================
-onMounted(() => {
+onMounted(async () => {
   // 获取全量数据
-  sendQueryCutList()
+  await sendQueryCutList()
   initLoading.value = false
   
   // 设置焦点到列表容器
   nextTick(() => {
     if (scrollerRef.value) {
       scrollerRef.value.focus()
-    }
-    // 确保虚拟滚动组件已初始化
-    if (virtListRef.value) {
-      console.log('虚拟滚动组件已初始化')
-      // 调试：查看虚拟滚动组件的DOM结构
-      console.log('虚拟滚动组件DOM:', virtListRef.value.$el)
-      console.log('虚拟滚动组件子元素:', virtListRef.value.$el?.children)
     }
   })
 })
@@ -195,8 +247,17 @@ watch(showItemList, () => {
  * 查询全部剪切列表
  */
 const sendQueryCutList = async () => {
-  let result = await dbService.fetchItems()
-  allCutList.value = result
+  try {
+    let result = await dbService.fetchItems()
+    allCutList.value = result || []
+    showItemList.value = allCutList.value
+    
+    nextTick(() => {
+      listKey.value++
+    })
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  }
 }
 
 /**
@@ -211,8 +272,32 @@ const sendDeleteItem = (remove) => {
  * 打开详情窗口
  * @param {Object} item - 项目数据
  */
-const sendOpenDetail = (item) => {
-  // 预留接口
+const openDetail = (item) => {
+  detailItem.value = { ...item }
+  detailModalOpen.value = true
+}
+
+/**
+ * 关闭详情窗口
+ */
+const closeDetail = () => {
+  detailModalOpen.value = false
+}
+
+/**
+ * 复制详情内容
+ */
+const copyDetailContent = () => {
+  copyToSystem(detailItem.value.content)
+  showMessageShort('内容已复制到剪贴板')
+}
+
+/**
+ * 删除详情项
+ */
+const deleteDetailItem = () => {
+  deleteItem(detailItem.value)
+  closeDetail()
 }
 
 /**
@@ -424,14 +509,8 @@ const navigateUp = () => {
     currentItemIdx.value--
   }
   
-  // 检查是否需要滚动，添加延迟确保虚拟滚动渲染完成
-  nextTick(() => {
-    setTimeout(() => {
-      if (!isSelectedItemVisible()) {
-        scrollToSelectedItem()
-      }
-    }, 50)
-  })
+  // 立即检查并滚动，使用instant模式确保快速响应
+  immediateScrollCheck()
 }
 
 /**
@@ -444,13 +523,18 @@ const navigateDown = () => {
     currentItemIdx.value++
   }
   
-  // 检查是否需要滚动，添加延迟确保虚拟滚动渲染完成
-  nextTick(() => {
-    setTimeout(() => {
-      if (!isSelectedItemVisible()) {
-        scrollToSelectedItem()
-      }
-    }, 50)
+  // 立即检查并滚动，使用instant模式确保快速响应
+  immediateScrollCheck()
+}
+
+/**
+ * 立即检查并滚动（不使用防抖）
+ */
+const immediateScrollCheck = () => {
+  // 使用requestAnimationFrame确保在下一帧立即执行，提供最佳性能
+  requestAnimationFrame(() => {
+    // 每次都执行滚动检查，确保选中项始终在可视区域内
+    scrollToSelectedItem(true) // 使用立即滚动模式，不使用动画
   })
 }
 
@@ -482,145 +566,73 @@ const isSelectedItemVisible = () => {
     return false
   }
   
-  // 尝试多种方式获取滚动容器
-  let scrollContainer = null
-  
-  // 方法1: 通过虚拟滚动组件的引用
-  if (virtListRef.value?.$el) {
-    scrollContainer = virtListRef.value.$el
-  }
-  
-  // 方法2: 通过ID查找
-  if (!scrollContainer) {
-    scrollContainer = document.getElementById('cutItemBox')
-  }
-  
-  // 方法3: 查找实际的滚动容器
-  if (!scrollContainer) {
-    const scrollerElement = document.querySelector('.scroller')
-    if (scrollerElement) {
-      scrollContainer = scrollerElement
-    }
-  }
+  // 快速获取滚动容器
+  const scrollContainer = virtListRef.value?.$el || document.getElementById('cutItemBox') || document.querySelector('.scroller')
   
   if (!scrollContainer) {
     return false
   }
   
   const itemHeight = 40
-  const targetScrollTop = currentItemIdx.value * itemHeight
-  const containerHeight = scrollContainer.clientHeight
-  const currentScrollTop = scrollContainer.scrollTop
-  const maxScrollTop = scrollContainer.scrollHeight - containerHeight
-  
-  const itemTop = targetScrollTop
+  const itemTop = currentItemIdx.value * itemHeight
   const itemBottom = itemTop + itemHeight
-  const visibleTop = currentScrollTop
-  const visibleBottom = currentScrollTop + containerHeight
+  const visibleTop = scrollContainer.scrollTop
+  const visibleBottom = visibleTop + scrollContainer.clientHeight
   
-  // 检查项目是否完全在可视区域内
-  const isFullyVisible = itemTop >= visibleTop && itemBottom <= visibleBottom
-  
-  // 特殊处理：如果是最后一个item，允许部分可见
-  if (currentItemIdx.value === showItemList.value.length - 1) {
-    return itemTop >= visibleTop && itemTop < visibleBottom
-  }
-  
-  return isFullyVisible
+  // 检查项目是否在可视区域内（允许部分可见）
+  return itemTop < visibleBottom && itemBottom > visibleTop
 }
 
 /**
  * 滚动到选中项
+ * @param {boolean} instant - 是否立即滚动（不使用动画）
  */
-const scrollToSelectedItem = () => {
-  nextTick(() => {
-    if (currentItemIdx.value < 0 || currentItemIdx.value >= showItemList.value.length) {
-      return
-    }
-    
-    // 尝试多种方式获取滚动容器
-    let scrollContainer = null
-    
-    // 方法1: 通过虚拟滚动组件的引用
-    if (virtListRef.value?.$el) {
-      scrollContainer = virtListRef.value.$el
-    }
-    
-    // 方法2: 通过ID查找
-    if (!scrollContainer) {
-      scrollContainer = document.getElementById('cutItemBox')
-    }
-    
-    // 方法3: 查找实际的滚动容器
-    if (!scrollContainer) {
-      const scrollerElement = document.querySelector('.scroller')
-      if (scrollerElement) {
-        scrollContainer = scrollerElement
-      }
-    }
-    
-    if (!scrollContainer) {
-      console.warn('无法找到滚动容器')
-      return
-    }
-    
-    // 计算选中项的位置
-    const itemHeight = 40 // minSize 的值
-    const targetScrollTop = currentItemIdx.value * itemHeight
-    
-    // 获取当前滚动容器的尺寸
-    const containerHeight = scrollContainer.clientHeight
-    const currentScrollTop = scrollContainer.scrollTop
-    const maxScrollTop = scrollContainer.scrollHeight - containerHeight
-    
-    // 检查是否需要滚动
-    const itemTop = targetScrollTop
-    const itemBottom = itemTop + itemHeight
-    const visibleTop = currentScrollTop
-    const visibleBottom = currentScrollTop + containerHeight
-    
-    let newScrollTop = currentScrollTop
-    
-    // 特殊处理：如果是最后一个item
-    if (currentItemIdx.value === showItemList.value.length - 1) {
-      // 确保最后一个item的顶部在可视区域内
-      if (itemTop < visibleTop) {
-        newScrollTop = itemTop
-      } else if (itemTop >= visibleBottom) {
-        newScrollTop = itemTop
-      }
-    } else {
-      // 普通item的滚动逻辑
-      if (itemTop < visibleTop) {
-        newScrollTop = itemTop
-      } else if (itemBottom > visibleBottom) {
-        newScrollTop = itemBottom - containerHeight
-      }
-    }
-    
-    // 边界检查：确保滚动位置在有效范围内
-    newScrollTop = Math.max(0, Math.min(newScrollTop, maxScrollTop))
-    
-    // 执行滚动
-    if (newScrollTop !== currentScrollTop) {
+const scrollToSelectedItem = (instant = false) => {
+  if (currentItemIdx.value < 0 || currentItemIdx.value >= showItemList.value.length) {
+    return
+  }
+  
+  // 获取滚动容器
+  const scrollContainer = virtListRef.value?.$el || document.getElementById('cutItemBox') || document.querySelector('.scroller')
+  
+  if (!scrollContainer) {
+    return
+  }
+  
+  // 查找当前选中的DOM元素
+  const selectedElement = document.querySelector('.list-item-selected')
+  
+  if (!selectedElement) {
+    // 如果元素还未渲染（在虚拟滚动外），尝试使用虚拟滚动的方法
+    if (virtListRef.value && typeof virtListRef.value.scrollToIndex === 'function') {
       try {
-        scrollContainer.scrollTo({
-          top: newScrollTop,
-          behavior: 'smooth'
-        })
+        virtListRef.value.scrollToIndex(currentItemIdx.value)
       } catch (error) {
-        console.warn('scrollTo方法失败，尝试使用scrollIntoView:', error)
-        // 备选方案：使用scrollIntoView
-        const selectedElement = document.querySelector('.list-item-selected')
-        if (selectedElement) {
-          selectedElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest'
-          })
-        }
+        console.warn('scrollToIndex 调用失败:', error)
       }
     }
-  })
+    return
+  }
+  
+  // 使用 getBoundingClientRect 获取实际位置
+  const containerRect = scrollContainer.getBoundingClientRect()
+  const itemRect = selectedElement.getBoundingClientRect()
+  
+  // 计算选中项相对于容器的位置
+  const offsetTop = itemRect.top - containerRect.top
+  const offsetBottom = itemRect.bottom - containerRect.bottom
+  
+  // 设置缓冲区（避免紧贴边缘）
+  const buffer = 10
+  
+  // 如果选中项在可视区域上方
+  if (offsetTop < buffer) {
+    scrollContainer.scrollTop += offsetTop - buffer
+  }
+  // 如果选中项在可视区域下方
+  else if (offsetBottom > -buffer) {
+    scrollContainer.scrollTop += offsetBottom + buffer
+  }
 }
 
 // ==================== 组件暴露 ====================
@@ -702,5 +714,23 @@ defineExpose({
 /* ==================== 滚动容器样式 ==================== */
 .scroller {
   height: 100%;
+}
+
+/* ==================== 详情模态框样式 ==================== */
+.detail-modal-content {
+  padding: 8px 0;
+}
+
+.detail-modal-content :deep(.ant-descriptions-item-label) {
+  font-weight: 600;
+  background-color: #fafafa;
+}
+
+.detail-modal-content :deep(.ant-textarea) {
+  resize: vertical;
+}
+
+.detail-modal-content :deep(.ant-space) {
+  gap: 8px !important;
 }
 </style>

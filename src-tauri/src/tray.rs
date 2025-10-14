@@ -1,5 +1,5 @@
 use tauri::{
-    menu::{Menu, MenuItem, Submenu},
+    menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
     Runtime,
@@ -17,7 +17,7 @@ pub fn create_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     let _ = TrayIconBuilder::with_id("tray")
         .icon(tray_icon)
         .menu(&menu)
-        .menu_on_left_click(false)
+        .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "quit" => {
                 app.exit(0);
